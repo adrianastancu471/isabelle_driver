@@ -15,6 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+//#include "timeout.h" ->  FUNCTION_BODY_NOT_IN_INPUT_C_FILE ?
+#include "timeout.c"
+
 #define OCTRNG_ENTROPY_REG 0
 #define OCTRNG_CONTROL_ADDR 0x0001180040000000ULL
 #define OCTRNG_RESET  (1UL << 3)
@@ -26,6 +29,8 @@ static struct reg {
 } rng_regs;
 
 unsigned long control_addr2;
+
+int rand_value;
 
 static void set_register(unsigned long long reg, unsigned long  value) 
 {
@@ -57,6 +62,20 @@ static unsigned long get_register(unsigned long long reg)
   return 0;
 }
 
+void octrng_attach(void);
+
+void
+octrng_rnd(void)
+{
+	unsigned int value;
+
+	octrng_attach();
+
+	rand_value = get_register(OCTRNG_ENTROPY_REG);
+
+  timeout_add_msec(10);
+}
+
 void
 octrng_attach(void)
 {
@@ -65,29 +84,12 @@ octrng_attach(void)
 	control_reg = get_register(OCTRNG_CONTROL_ADDR);
 	control_reg |= (OCTRNG_ENABLE_OUTPUT | OCTRNG_ENABLE_ENTROPY);
 	set_register(OCTRNG_CONTROL_ADDR,control_reg);
-/*
-	timeout_set(&sc->sc_to, octrng_rnd, sc);
 
-	timeout_add_sec(&sc->sc_to, 5);*/
+//	timeout_set(&octrng_rnd);
 
-//	printf("Init end \n");
+	timeout_add_sec(5);
+
+//  octrng_rnd();
 }
 
-int
-octrng_rnd(void)
-{
-	unsigned int value;
-
-	octrng_attach();
-
-	value = get_register(OCTRNG_ENTROPY_REG);
-
-//	printf("%X ", value);	
-
-return value;
-
-/*
-	enqueue_randomness(value);
-	timeout_add_msec(&sc->sc_to, 10);*/
-}
 
