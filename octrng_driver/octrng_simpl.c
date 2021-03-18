@@ -14,9 +14,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-//#include "timeout.h" ->  FUNCTION_BODY_NOT_IN_INPUT_C_FILE ?
-#include "timeout.c"
+#include "octrng_simpl.h"
+#include "timeout.h" //->  FUNCTION_BODY_NOT_IN_INPUT_C_FILE ?
+//#include "timeout.c"
 
 #define OCTRNG_ENTROPY_REG 0
 #define OCTRNG_CONTROL_ADDR 0x0001180040000000ULL
@@ -73,7 +73,7 @@ octrng_rnd(void)
 
 	rand_value = get_register(OCTRNG_ENTROPY_REG);
 
-  timeout_add_msec(10);
+  //timeout_add_msec(10);
 }
 
 void
@@ -87,7 +87,7 @@ octrng_attach(void)
 
 //	timeout_set(&octrng_rnd);
 
-	timeout_add_sec(5);
+	//timeout_add_sec(5);
 
 //  octrng_rnd();
 }
