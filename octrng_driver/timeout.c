@@ -3,19 +3,33 @@
 
 static unsigned long long timer;
 static int running_tasks;
+static int current_task;
 
-void add_task(void(*t_fun)(void), int t)
+void 
+add_task(void(*t_fun)(void), int t)
 {
-	queue[running_tasks].start = get_time();
-	queue[running_tasks].timeout = t;
-	queue[running_tasks].timeout_fun = t_fun;
-	running_tasks++;
+	if (running_tasks < MAX_QUEUE)
+	{
+		queue[current_task].start = get_time();
+		queue[current_task].timeout = t;
+		queue[current_task].timeout_fun = t_fun;
+		running_tasks++;
+		current_task = (current_task + 1) % MAX_QUEUE;
+	}
+}
+
+void 
+run_task(int task_id)
+{
+	queue[task_id].timeout_fun();
+	queue[task_id].timeout_fun = 0;
+	running_tasks--;
 }
 
 void 
 timeout_add_sec(Task* t, unsigned long long sec)
 {
-	t->timeout = sec;
+	t->timeout += sec;
 }
 
 
@@ -45,14 +59,8 @@ idle(void)
 	timer++;
 }
 
-int get_running_tasks()
+int 
+get_running_tasks()
 {
 	return running_tasks;
-}
-
-void run_task(int task_id)
-{
-	queue[task_id].timeout_fun();
-	queue[task_id].timeout_fun = 0;
-	running_tasks--;
 }

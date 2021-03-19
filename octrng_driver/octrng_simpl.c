@@ -62,18 +62,14 @@ static unsigned long get_register(unsigned long long reg)
   return 0;
 }
 
-void octrng_attach(void);
-
 void
 octrng_rnd(void)
 {
 	unsigned int value;
 
-	octrng_attach();
-
 	rand_value = get_register(OCTRNG_ENTROPY_REG);
 
-  //timeout_add_msec(10);
+  add_task(octrng_rnd, 10);
 }
 
 void
@@ -85,11 +81,5 @@ octrng_attach(void)
 	control_reg |= (OCTRNG_ENABLE_OUTPUT | OCTRNG_ENABLE_ENTROPY);
 	set_register(OCTRNG_CONTROL_ADDR,control_reg);
 
-//	timeout_set(&octrng_rnd);
-
-	//timeout_add_sec(5);
-
-//  octrng_rnd();
+  add_task(octrng_rnd, 5);
 }
-
-

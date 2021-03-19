@@ -1,29 +1,25 @@
 #include "timeout.h"
 #include "octrng_simpl.h"
 
+#define TIMEOUT 100
+
 int main()
 {
+	int i;
+
 	add_task(octrng_attach, 1);
-	add_task(octrng_rnd, 5);
 
-	int current_task = 0;
-
-	while (get_running_tasks()) 
+	while (get_time() < TIMEOUT)
 	{
-		if(queue[current_task].timeout_fun != 0)
+		for (i = 0; i < MAX_QUEUE; i++)
 		{
-			if (queue[current_task].timeout <= get_time() - queue[current_task].start)
+			if(queue[i].timeout_fun != 0 &&
+				queue[i].timeout <= get_time() - queue[i].start)
 			{
-				run_task(current_task);
+				run_task(i);
 			}
 		}
-		current_task++;
-
-		if(current_task == MAX_QUEUE)
-		{
-			current_task = 0;
-			idle();
-		}
+		idle();
 	}
 	return 0;
 }
