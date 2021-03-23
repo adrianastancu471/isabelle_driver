@@ -70,7 +70,7 @@ To set up Isabelle for use in l4v/, assuming you have no previous installation o
 Building CParser proof:
 _source: https://github.com/seL4/l4v_
 
-    ./isabelle/bin/isabelle build -d . -v -b CParser
+    ./run_tests -v CParser
     
 
 Start Isabelle Jedit: 
