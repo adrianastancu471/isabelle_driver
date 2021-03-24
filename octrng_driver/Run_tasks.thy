@@ -65,17 +65,11 @@ thm main'_def
 
 (* Timeout functions *)
 (* get_time is correct *)
-lemma get_time_correct [simp]: "\<lbrace> \<lambda>s. timer_'' s = a \<rbrace> 
-  get_time'
+lemma get_time_correct [simp]: "\<lbrace>\<lambda>s. timer_'' s = a  \<rbrace> 
+  get_time' 
   \<lbrace>\<lambda>r s.  r = a \<rbrace>!"
-    unfolding set_register'_def
-    unfolding condition_def
-    unfolding OCTRNG_CONTROL_ADDR_def
-    apply (clarsimp simp: fun_upd_apply)
-    apply wp 
-    apply auto 
-  done 
-
+    unfolding get_time'_def
+ oops 
 
 
 
