@@ -1,36 +1,22 @@
-theory Run_tasks
-imports
-  "CParser.CTranslation"
-  "AutoCorres.AutoCorres"
+theory Run_Tasks
+  imports 
+    "CParser.CTranslation"
+    "AutoCorres.AutoCorres" 
 begin
 
-declare [[populate_globals=true]]
+external_file "run_tasks.c_pp"
+install_C_file "run_tasks.c_pp"
 
-(*external_file "timeout.c"
-install_C_file "timeout.c"
-
-autocorres [
-  heap_abs_syntax,
-  function_name_suffix="'",
-  lifted_globals_field_suffix="_''" ] "timeout.c"
-
-context timeout begin
-thm timeout_add_msec_body_def
-thm timeout_add_msec'_def
-end*)
-
-external_file "run_tasks.c"
-install_C_file "run_tasks.c" 
 autocorres [
   heap_abs_syntax,
   function_name_suffix="'",
   lifted_globals_field_suffix="_''",
   ts_force nondet = main 
- ] "run_tasks.c"
+ ] "run_tasks.c_pp"
 
 context run_tasks begin
 
-definition "TIMEOUT \<equiv> 100 :: word64"
+definition "TIMEOUT \<equiv> 100 :: word32"
 definition "MAX_QUEUE \<equiv> 100 :: word32"
 definition "OCTRNG_ENTROPY_REG \<equiv> 0 :: word64"
 definition "OCTRNG_CONTROL_ADDR \<equiv> 0x0001180040000000 :: word64"
@@ -48,8 +34,6 @@ thm idle'_def
 thm add_task'_def
 thm get_running_tasks'_def
 thm run_task'_def
-thm call_function'_def
-thm timeout_add_msec_body_def
 thm timeout_add_msec'_def
 
 (* Octrng functions *)
@@ -64,6 +48,7 @@ thm main'_def
 
 
 (* Timeout functions *)
+
 (* get_time is correct *)
 lemma get_time_correct [simp]: "\<lbrace>\<lambda>s. timer_'' s = a  \<rbrace> 
   get_time' 
@@ -164,7 +149,6 @@ lemma main_function: "\<lbrace>\<lambda>s. True\<rbrace> main' \<lbrace>\<lambda
     [where I="\<lambda>(i') s. 0 \<le> i' \<and> i' \<le> 100"
         and M="\<lambda>((i'), s). MAX_QUEUE - i'"])*)
   done
-
 
 
 end

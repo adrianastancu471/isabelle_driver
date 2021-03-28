@@ -14,9 +14,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "octrng_simpl.h"
-#include "timeout.h" //->  FUNCTION_BODY_NOT_IN_INPUT_C_FILE ?
-//#include "timeout.c"
+#include "timeout.h"
 
 #define OCTRNG_ENTROPY_REG 0
 #define OCTRNG_CONTROL_ADDR 0x0001180040000000ULL
@@ -28,20 +28,16 @@ static struct reg {
   unsigned long control_addr;
 } rng_regs;
 
-unsigned long control_addr2;
-
-int rand_value;
+static unsigned long rand_value;
 
 static void set_register(unsigned long long reg, unsigned long  value) 
 {
   switch(reg) {
     case OCTRNG_CONTROL_ADDR:
       rng_regs.control_addr = value;
-      control_addr2 = value;
       break;
     default:
-      rng_regs.control_addr = 0;   
-      control_addr2 = 0;                         
+      rng_regs.control_addr = 0;                
       break;
   }
 }
@@ -52,7 +48,7 @@ static unsigned long get_register(unsigned long long reg)
     case OCTRNG_ENTROPY_REG:
       if ((rng_regs.control_addr&OCTRNG_ENABLE_OUTPUT) &&
         (rng_regs.control_addr&OCTRNG_ENABLE_ENTROPY))
-         return 13;
+         return get_time();
       break;
     case OCTRNG_CONTROL_ADDR:
       return rng_regs.control_addr;
@@ -68,7 +64,6 @@ octrng_rnd(void)
 	unsigned int value;
 
 	rand_value = get_register(OCTRNG_ENTROPY_REG);
-
   add_task(octrng_rnd, 10);
 }
 
