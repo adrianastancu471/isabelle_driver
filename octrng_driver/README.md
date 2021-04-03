@@ -60,7 +60,7 @@ To run Isabelle on a certain file just open the Jedit editor giving the theory f
 First the preprocesor output file has to be prepared, it will be used as input file for C-to-Isabelle parser.
 From the `octrng_driver` directory, run:
 
-	gcc -DINCLUDE_C_FILES -E run_tasks.c > run_tasks.c_pp
+	gcc -DINCLUDE_C_FILES -E -CC run_tasks.c > run_tasks.c_pp
 
 
 Then open Jedit with theory file, this have to be run from `verification\l4v` directory:
