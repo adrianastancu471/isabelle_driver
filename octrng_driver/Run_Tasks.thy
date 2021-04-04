@@ -32,9 +32,10 @@ definition "IDLE \<equiv> 3 :: word32"
 thm get_time'_def
 thm idle'_def
 thm add_task'_def
-thm get_running_tasks'_def
 thm run_task'_def
+thm timeout_add_sec'_def
 thm timeout_add_msec'_def
+thm get_running_tasks'_def
 
 (* Octrng functions *)
 thm set_register'_def
@@ -50,11 +51,33 @@ thm main'_def
 (* Timeout functions *)
 
 (* get_time is correct *)
-lemma get_time_correct [simp]: "\<lbrace>\<lambda>s. timer_'' s = a  \<rbrace> 
-  get_time' 
-  \<lbrace>\<lambda>r s.  r = a \<rbrace>!"
-    unfolding get_time'_def
- oops 
+thm get_time'_def
+lemma get_time_correct [simp]: "get_time' \<equiv> timer_''"
+  unfolding get_time'_def
+  apply auto 
+  done
+
+(* get_running_tasks correct *)
+thm get_running_tasks'_def
+lemma get_running_tasks_correct [simp]: (*
+"\<lbrace>\<lambda>s. True\<rbrace> 
+ idle' get_running_tasks'
+\<lbrace>\<lambda>r s. r \<ge> 0 \<and> r \<le> MAX_QUEUE \<rbrace>!"
+*)
+"\<lbrace>\<lambda>s. running_tasks_'' s = a \<rbrace>
+  \<lambda>_s. get_running_tasks' s
+\<lbrace>\<lambda>_s. True \<rbrace>!" 
+  unfolding get_running_tasks'_def
+  apply auto
+
+(* idle increases time *)
+lemma idle_increases [simp]: "\<lbrace> \<lambda>s. timer_'' s = a \<rbrace> 
+ idle'
+ \<lbrace>\<lambda>_s. timer_'' s = a + 1\<rbrace> " 
+  unfolding idle'_def
+  apply wp 
+  apply auto 
+  done
 
 
 
@@ -132,23 +155,40 @@ lemma octrng_rnd: "
   oops
 
 
+definition
+  timer_limits_inv :: "word32 \<Rightarrow> 's lifted_globals_scheme \<Rightarrow> bool"
+where
+  "timer_limits_inv a s \<equiv>  a = timer_'' s \<and> 0 \<le> timer_'' s \<and> timer_'' s \<le> TIMEOUT	"
+
+
+definition
+  timer_limits_measure :: "'a \<Rightarrow> 's lifted_globals_scheme \<Rightarrow> word32"
+where
+  "timer_limits_measure a s \<equiv> TIMEOUT - timer_'' s "
 
 (* Main function *)
-lemma main_function: "\<lbrace>\<lambda>s. True\<rbrace> main' \<lbrace>\<lambda>_s. timer_'' s = 100\<rbrace>"
-  unfolding main'_def get_time'_def add_task'_def idle'_def
-    apply (clarsimp simp:fun_upd_apply)
-  apply (subst whileLoop_add_inv
-   [where I="\<lambda>_s.  0 \<le> timer_'' s \<and> timer_'' s \<le> TIMEOUT"
-      and M="\<lambda>s. TIMEOUT - timer_'' s"])
-  unfolding TIMEOUT_def 
-
+(* Constraints: 
+ - main function runs until timer reaches TIMEOUT value
  
-  apply wp
+*)
+lemma main_function: "\<lbrace>\<lambda>s. timer_'' s = 0 \<and> running_tasks_'' s = 0\<rbrace>
+   main' 
+  \<lbrace>\<lambda>_s. timer_'' s = TIMEOUT\<rbrace>!"
+  unfolding main'_def get_time'_def add_task'_def idle'_def
+  unfolding TIMEOUT_def 
+  apply (subst whileLoop_add_inv 
+   [where I="\<lambda>(j)s. timer_limits_inv j s"
+      and M="\<lambda>(j, s). timer_limits_measure j s"])
+  apply wp 
+  unfolding timer_limits_inv_def
     apply auto
- (* apply (subst whileLoop_add_inv
-    [where I="\<lambda>(i') s. 0 \<le> i' \<and> i' \<le> 100"
-        and M="\<lambda>((i'), s). MAX_QUEUE - i'"])*)
+    unfolding TIMEOUT_def 
+    apply unat_arith
+  unfolding timer_limits_measure_def
+  unfolding TIMEOUT_def
+    apply auto
+    apply unat_arith
+  apply (wp; auto)+
   done
-
 
 end

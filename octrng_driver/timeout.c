@@ -32,11 +32,13 @@ add_task(void(*t_fun)(void), int t)
 	}
 }
 
+/**
+  DONT_TRANSLATE
+  */
 void 
 run_task(int task_id)
 {
-  //TODO add MODIFIES adnotation
-	//queue[task_id].timeout_fun(); //-> may_only_modify_globals
+	queue[task_id].timeout_fun();
 	queue[task_id].timeout_fun = 0;
 	running_tasks--;
 }
