@@ -73,7 +73,8 @@ octrng_attach(void)
 	unsigned long control_reg;
 
 	control_reg = get_register(OCTRNG_CONTROL_ADDR);
-	control_reg |= (OCTRNG_ENABLE_OUTPUT | OCTRNG_ENABLE_ENTROPY);
+	control_reg |= OCTRNG_ENABLE_OUTPUT;
+  control_reg |= OCTRNG_ENABLE_ENTROPY;
 	set_register(OCTRNG_CONTROL_ADDR,control_reg);
 
   add_task(octrng_rnd, 5);

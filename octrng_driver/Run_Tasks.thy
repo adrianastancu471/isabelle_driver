@@ -1,12 +1,16 @@
 theory Run_Tasks
   imports 
-    "CParser.CTranslation"
     "AutoCorres.AutoCorres" 
 begin
+
+declare [[quick_and_dirty = true]]
+declare [[sorry_modifies_proofs = true]]
 
 external_file "run_tasks.c_pp"
 install_C_file "run_tasks.c_pp"
 
+declare [[quick_and_dirty = false]]
+-r
 autocorres [
   heap_abs_syntax,
   function_name_suffix="'",
@@ -23,10 +27,6 @@ definition "OCTRNG_CONTROL_ADDR \<equiv> 0x0001180040000000 :: word64"
 definition "OCTRNG_RESET  \<equiv> (1 << 3) :: word32"
 definition "OCTRNG_ENABLE_OUTPUT \<equiv> (1 << 1) :: word32"
 definition "OCTRNG_ENABLE_ENTROPY  \<equiv> (1 << 0) :: word32"
-
-definition "RNG_ATTACH \<equiv> 1 :: word32"
-definition "RNG_RND \<equiv> 2 :: word32"
-definition "IDLE \<equiv> 3 :: word32"
 
 (* Timeout functions *)
 thm get_time'_def
@@ -46,8 +46,6 @@ thm octrng_rnd'_def
 (* Main function *)
 thm main'_def
 
-
-
 (* Timeout functions *)
 
 (* get_time is correct *)
@@ -57,30 +55,16 @@ lemma get_time_correct [simp]: "get_time' \<equiv> timer_''"
   apply auto 
   done
 
-(* get_running_tasks correct *)
-thm get_running_tasks'_def
-lemma get_running_tasks_correct [simp]: (*
-"\<lbrace>\<lambda>s. True\<rbrace> 
- idle' get_running_tasks'
-\<lbrace>\<lambda>r s. r \<ge> 0 \<and> r \<le> MAX_QUEUE \<rbrace>!"
-*)
-"\<lbrace>\<lambda>s. running_tasks_'' s = a \<rbrace>
-  \<lambda>_s. get_running_tasks' s
-\<lbrace>\<lambda>_s. True \<rbrace>!" 
-  unfolding get_running_tasks'_def
-  apply auto
-
 (* idle increases time *)
-lemma idle_increases [simp]: "\<lbrace> \<lambda>s. timer_'' s = a \<rbrace> 
- idle'
+
+lemma idle_increases [simp]: 
+ "\<lbrace> \<lambda>s. timer_'' s = a \<rbrace> 
+  idle'
  \<lbrace>\<lambda>_s. timer_'' s = a + 1\<rbrace> " 
   unfolding idle'_def
   apply wp 
   apply auto 
   done
-
-
-
 
 (* Octrng functions *)
 
@@ -115,7 +99,6 @@ lemma get_reg_entropy [simp]: "\<lbrace>\<lambda>s.
   get_register' OCTRNG_ENTROPY_REG
   \<lbrace>\<lambda>r s. r = a \<rbrace>"
     unfolding get_register'_def
-    apply (clarsimp simp:fun_upd_apply)
     apply wp
     unfolding OCTRNG_ENTROPY_REG_def OCTRNG_ENABLE_OUTPUT_def OCTRNG_ENABLE_ENTROPY_def
     unfolding get_time'_def
@@ -124,42 +107,50 @@ lemma get_reg_entropy [simp]: "\<lbrace>\<lambda>s.
 
 (* octrng_attach sets registers *)
   thm octrng_attach'_def
-lemma octrng_attach [simp]: "\<lbrace> \<lambda>s. True\<rbrace>
-  octrng_attach' 
-  \<lbrace> \<lambda>_s. control_addr_C (rng_regs_'' s) && (OCTRNG_ENABLE_OUTPUT || OCTRNG_ENABLE_ENTROPY) \<noteq> 0 \<rbrace> "
+
+lemma octrng_attach : "\<lbrace> \<lambda>s. True\<rbrace>
+    octrng_attach' 
+  \<lbrace> \<lambda>_s. 
+    control_addr_C (rng_regs_'' s) && OCTRNG_ENABLE_OUTPUT \<noteq> 0 \<and>
+    control_addr_C (rng_regs_'' s) && OCTRNG_ENABLE_ENTROPY \<noteq> 0 \<rbrace> "
     unfolding octrng_attach'_def 
     unfolding get_register'_def set_register'_def
     unfolding add_task'_def
-    apply (clarsimp simp:fun_upd_apply)
     apply wp
     apply auto
     unfolding OCTRNG_ENABLE_OUTPUT_def OCTRNG_ENABLE_ENTROPY_def
-    apply auto
+    apply word_bitwise+
   done
 
+thm octrng_rnd'_def
 
 (* octrng_rnd gets current time *)
-thm octrng_rnd'_def
-lemma octrng_rnd: "
-  \<lbrace> \<lambda>s. timer_'' s = a \<and> current_task_'' s <  MAX_QUEUE\<rbrace> 
+lemma octrng_rnd: 
+ "\<lbrace> 
+   \<lambda>s. timer_'' s = a \<and> 
+   running_tasks_'' s < MAX_QUEUE \<and> 
+   current_task_'' s < MAX_QUEUE \<and>
+   control_addr_C (rng_regs_'' s) && 
+                OCTRNG_ENABLE_OUTPUT \<noteq> 0 \<and>
+   control_addr_C (rng_regs_'' s) && 
+                OCTRNG_ENABLE_ENTROPY \<noteq> 0 
+  \<rbrace> 
   octrng_rnd' 
   \<lbrace> \<lambda>_s. rand_value_'' s = a\<rbrace>!"
   unfolding octrng_rnd'_def
   unfolding get_register'_def add_task'_def
   unfolding get_time'_def
   unfolding MAX_QUEUE_def
-    apply (clarsimp simp:fun_upd_apply)
-    apply wp
-  apply auto
- (* additional lemma if registers not set \<rightarrow> timer_'' = 0 *)
-  oops
+  unfolding OCTRNG_ENABLE_OUTPUT_def 
+  unfolding OCTRNG_ENABLE_ENTROPY_def
+  apply (wp; auto)+
+  done
 
 
 definition
   timer_limits_inv :: "word32 \<Rightarrow> 's lifted_globals_scheme \<Rightarrow> bool"
 where
   "timer_limits_inv a s \<equiv>  a = timer_'' s \<and> 0 \<le> timer_'' s \<and> timer_'' s \<le> TIMEOUT	"
-
 
 definition
   timer_limits_measure :: "'a \<Rightarrow> 's lifted_globals_scheme \<Rightarrow> word32"
@@ -171,9 +162,12 @@ where
  - main function runs until timer reaches TIMEOUT value
  
 *)
-lemma main_function: "\<lbrace>\<lambda>s. timer_'' s = 0 \<and> running_tasks_'' s = 0\<rbrace>
+
+lemma main_function: 
+  "\<lbrace> \<lambda>s. timer_'' s = 0 \<and> running_tasks_'' s = 0 \<rbrace>
    main' 
-  \<lbrace>\<lambda>_s. timer_'' s = TIMEOUT\<rbrace>!"
+   \<lbrace>\<lambda>_s. timer_'' s = TIMEOUT\<rbrace>!"
+
   unfolding main'_def get_time'_def add_task'_def idle'_def
   unfolding TIMEOUT_def 
   apply (subst whileLoop_add_inv 
@@ -188,7 +182,7 @@ lemma main_function: "\<lbrace>\<lambda>s. timer_'' s = 0 \<and> running_tasks_'
   unfolding TIMEOUT_def
     apply auto
     apply unat_arith
-  apply (wp; auto)+
+      apply (wp; auto)+
   done
 
 end

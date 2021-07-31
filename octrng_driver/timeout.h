@@ -3,7 +3,7 @@
 #define MAX_QUEUE 100
 
 static unsigned long timer;
-static int running_tasks;
+static unsigned int running_tasks;
 static unsigned int current_task;
 
 

@@ -33,12 +33,15 @@ add_task(void(*t_fun)(void), int t)
 }
 
 /**
-  DONT_TRANSLATE
+  MODIFIES: running_tasks queue timer
   */
 void 
 run_task(int task_id)
 {
-	queue[task_id].timeout_fun();
+	if(queue[task_id].timeout_fun)
+	{
+		//call the timeout function
+	}
 	queue[task_id].timeout_fun = 0;
 	running_tasks--;
 }
